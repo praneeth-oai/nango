@@ -2,15 +2,19 @@ import { Play, RotateCcw, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { permissions } from '@nangohq/authz';
+
 import { PlaygroundInputs } from './PlaygroundInputs';
 import { PlaygroundResult } from './PlaygroundResult';
 import { PlaygroundSelectors } from './PlaygroundSelectors';
 import { getInputFields } from './types';
-import { usePlaygroundReattach } from './usePlaygroundReattach';
-import { usePlaygroundRun } from './usePlaygroundRun';
+import { usePlayground } from './usePlayground';
+import { PermissionGate } from '../PermissionGate';
 import { Button } from '../ui/button';
 import { Sheet, SheetContent } from '../ui/sheet';
+import { useEnvironment } from '@/hooks/useEnvironment';
 import { useGetIntegrationFlows } from '@/hooks/useIntegration';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useStore } from '@/store';
 import { usePlaygroundStore } from '@/store/playground';
 import { cn } from '@/utils/utils';
@@ -67,8 +71,12 @@ export const Playground: React.FC = () => {
 
     const inputFields = useMemo(() => getInputFields(inputSchema), [inputSchema]);
 
-    const { handleRun, handleCancel } = usePlaygroundRun(inputFields);
-    usePlaygroundReattach();
+    const { handleRun, handleCancel } = usePlayground(inputFields);
+
+    const { data: envData } = useEnvironment(env);
+    const environment = envData?.environmentAndAccount?.environment;
+    const { can } = usePermissions();
+    const canUsePlayground = can(permissions.canUseProdPlayground) || !environment?.is_production;
 
     const clearInputError = useCallback((name: string) => clearPlaygroundInputError(name), [clearPlaygroundInputError]);
 
@@ -148,15 +156,23 @@ export const Playground: React.FC = () => {
                                             )}
                                         </>
                                     ) : result ? (
-                                        <Button variant="primary" size="sm" onClick={handleRun} disabled={!canRun}>
-                                            <RotateCcw />
-                                            Run again
-                                        </Button>
+                                        <PermissionGate condition={canUsePlayground}>
+                                            {(allowed) => (
+                                                <Button variant="primary" size="sm" onClick={handleRun} disabled={!canRun || !allowed}>
+                                                    <RotateCcw />
+                                                    Run again
+                                                </Button>
+                                            )}
+                                        </PermissionGate>
                                     ) : (
-                                        <Button variant="primary" size="sm" onClick={handleRun} disabled={!canRun}>
-                                            <Play />
-                                            Run
-                                        </Button>
+                                        <PermissionGate condition={canUsePlayground}>
+                                            {(allowed) => (
+                                                <Button variant="primary" size="sm" onClick={handleRun} disabled={!canRun || !allowed}>
+                                                    <Play />
+                                                    Run
+                                                </Button>
+                                            )}
+                                        </PermissionGate>
                                     )}
                                 </div>
                             </div>
