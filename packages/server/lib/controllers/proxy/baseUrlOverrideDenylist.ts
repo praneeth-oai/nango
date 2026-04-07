@@ -37,6 +37,5 @@ export function isBaseUrlOverrideDenied(overrideUrl: string, denylist: string[])
     } catch {
         return false;
     }
-    const denied = normalizeDenylist(denylist);
-    return denied.includes(hostname);
+    return denylist.includes(hostname);
 }

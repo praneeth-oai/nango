@@ -17,7 +17,7 @@ import {
 } from '@nangohq/shared';
 import { getHeaders, getLogger, metrics, redactHeaders, zodErrorToHTTP } from '@nangohq/utils';
 
-import { isBaseUrlOverrideDenied } from './baseUrlOverrideDenylist.js';
+import { isBaseUrlOverrideDenied, normalizeDenylist } from './baseUrlOverrideDenylist.js';
 import { envs } from '../../env.js';
 import { connectionIdSchema, providerConfigKeySchema } from '../../helpers/validation.js';
 import { connectionRefreshFailed, connectionRefreshSuccess } from '../../hooks/hooks.js';
@@ -38,6 +38,8 @@ type ForwardedHeaders = Record<string, string>;
 const MEMOIZED_CONNECTION_TTL = 60000;
 
 const logger = getLogger('Proxy.Controller');
+
+const baseUrlOverrideDenylist = normalizeDenylist(envs.NANGO_PROXY_BASE_URL_OVERRIDE_DENYLIST);
 
 const schemaHeaders = z.object({
     'provider-config-key': providerConfigKeySchema,
@@ -64,7 +66,7 @@ export const allPublicProxy = asyncWrapper<AllPublicProxy>(async (req, res, next
     }
     const parsedHeaders = valHeaders.data satisfies AllPublicProxy['Headers'];
     const baseUrlOverride = parsedHeaders['base-url-override'];
-    if (baseUrlOverride && isBaseUrlOverrideDenied(baseUrlOverride, envs.NANGO_PROXY_BASE_URL_OVERRIDE_DENYLIST)) {
+    if (baseUrlOverride && isBaseUrlOverrideDenied(baseUrlOverride, baseUrlOverrideDenylist)) {
         res.status(400).send({
             error: {
                 code: 'base_url_override_not_allowed',
