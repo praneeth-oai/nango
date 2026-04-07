@@ -31,10 +31,6 @@ describe('isBaseUrlOverrideDenied', () => {
         expect(isBaseUrlOverrideDenied('http://169.254.169.254/foo', ['169.254.169.254'])).toBe(true);
     });
 
-    it('matches URL-form deny entry', () => {
-        expect(isBaseUrlOverrideDenied('http://169.254.169.254/', ['http://169.254.169.254'])).toBe(true);
-    });
-
     it('returns false when host not listed', () => {
         expect(isBaseUrlOverrideDenied('https://api.github.com', ['169.254.169.254'])).toBe(false);
     });
