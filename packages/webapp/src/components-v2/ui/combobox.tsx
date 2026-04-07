@@ -203,7 +203,7 @@ export function Combobox<T extends string = string>(props: ComboboxProps<T>) {
                     </InputGroup>
                 </div>
 
-                <div className="max-h-72 w-full overflow-y-auto">
+                <div className="max-h-72 w-full overflow-y-auto" role="listbox">
                     {filteredOptions.length > 0 ? (
                         filteredOptions.map((opt) => {
                             const isSelected = props.allowMultiple ? props.selected.includes(opt.value) : opt.value === props.value;
@@ -212,8 +212,16 @@ export function Combobox<T extends string = string>(props: ComboboxProps<T>) {
                                 <div
                                     key={opt.value}
                                     role="option"
+                                    tabIndex={opt.disabled ? -1 : 0}
                                     aria-selected={isSelected}
                                     onClick={() => !opt.disabled && handleSelect(opt.value)}
+                                    onKeyDown={(e) => {
+                                        if (opt.disabled) return;
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleSelect(opt.value);
+                                        }
+                                    }}
                                     className={cn(
                                         'group flex w-full cursor-pointer items-center justify-between rounded-[4px] px-2 py-1 hover:bg-dropdown-bg-hover text-text-secondary hover:text-text-primary',
                                         opt.disabled && 'cursor-not-allowed opacity-50 pointer-events-none',

@@ -41,18 +41,35 @@ export const PlaygroundResult: React.FC<Props> = ({ env, isSync }) => {
                 <Separator className="bg-border-muted" />
                 <p className="text-text-primary text-body-small-semi">Results</p>
 
-                <Alert variant={result.state === 'waiting' || result.state === 'running' ? 'info' : result.success ? 'success' : 'error'} className="px-3 py-2">
-                    {result.state === 'waiting' || result.state === 'running' ? <Info /> : result.success ? <CheckCircle2 /> : <XCircle />}
+                <Alert
+                    variant={
+                        result.state === 'waiting' || result.state === 'running' || result.state === 'operation_not_found'
+                            ? 'info'
+                            : result.success
+                              ? 'success'
+                              : 'error'
+                    }
+                    className="px-3 py-2"
+                >
+                    {result.state === 'waiting' || result.state === 'running' || result.state === 'operation_not_found' ? (
+                        <Info />
+                    ) : result.success ? (
+                        <CheckCircle2 />
+                    ) : (
+                        <XCircle />
+                    )}
                     <AlertDescription className="text-body-small-regular">
                         {result.state === 'invalid_input'
                             ? 'Invalid input (see details below)'
-                            : result.state === 'metadata_update_failed'
-                              ? 'Failed to update connection metadata'
-                              : result.state === 'waiting' || result.state === 'running'
-                                ? `Running for ${(result.durationMs / 1000).toFixed(1)}s`
-                                : result.success
-                                  ? `Ran in ${(result.durationMs / 1000).toFixed(1)}s`
-                                  : `Failed after ${(result.durationMs / 1000).toFixed(1)}s`}
+                            : result.state === 'operation_not_found'
+                              ? 'Triggered successfully but could not track the operation'
+                              : result.state === 'metadata_update_failed'
+                                ? 'Failed to update connection metadata'
+                                : result.state === 'waiting' || result.state === 'running'
+                                  ? `Running for ${(result.durationMs / 1000).toFixed(1)}s`
+                                  : result.success
+                                    ? `Ran in ${(result.durationMs / 1000).toFixed(1)}s`
+                                    : `Failed after ${(result.durationMs / 1000).toFixed(1)}s`}
                     </AlertDescription>
                     <AlertActions>
                         {isSync && playgroundIntegration && playgroundConnection && showRecordsButton && (

@@ -76,7 +76,7 @@ export const Playground: React.FC = () => {
     const { data: envData } = useEnvironment(env);
     const environment = envData?.environmentAndAccount?.environment;
     const { can } = usePermissions();
-    const canUsePlayground = can(permissions.canUseProdPlayground) || !environment?.is_production;
+    const canUsePlayground = envData != null && (can(permissions.canUseProdPlayground) || !environment?.is_production);
 
     const clearInputError = useCallback((name: string) => clearPlaygroundInputError(name), [clearPlaygroundInputError]);
 
@@ -156,7 +156,7 @@ export const Playground: React.FC = () => {
                                             )}
                                         </>
                                     ) : result ? (
-                                        <PermissionGate condition={canUsePlayground}>
+                                        <PermissionGate condition={canUsePlayground} message="Your role does not have permission to use the playground.">
                                             {(allowed) => (
                                                 <Button variant="primary" size="sm" onClick={handleRun} disabled={!canRun || !allowed}>
                                                     <RotateCcw />
@@ -165,7 +165,7 @@ export const Playground: React.FC = () => {
                                             )}
                                         </PermissionGate>
                                     ) : (
-                                        <PermissionGate condition={canUsePlayground}>
+                                        <PermissionGate condition={canUsePlayground} message="Your role does not have permission to use the playground.">
                                             {(allowed) => (
                                                 <Button variant="primary" size="sm" onClick={handleRun} disabled={!canRun || !allowed}>
                                                     <Play />

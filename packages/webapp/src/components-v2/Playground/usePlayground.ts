@@ -127,6 +127,7 @@ export function usePlayground(inputFields: InputField[]) {
 
             // If the trigger failed immediately, surface the error right away.
             if (!response.ok) {
+                setPendingOperationId(null);
                 setResult({ success: false, data: triggerData, durationMs: triggerDurationMs });
                 setRunning(false);
                 return;
@@ -153,7 +154,8 @@ export function usePlayground(inputFields: InputField[]) {
             }
 
             if (!operation) {
-                setResult({ success: false, data: triggerData, durationMs: triggerDurationMs });
+                setPendingOperationId(null);
+                setResult({ success: false, state: 'operation_not_found', data: triggerData, durationMs: triggerDurationMs });
                 setRunning(false);
                 return;
             }

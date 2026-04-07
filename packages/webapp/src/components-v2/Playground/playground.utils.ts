@@ -19,8 +19,14 @@ function validateConstraints(field: InputField, value: unknown): string | null {
         if (field.maxLength != null && value.length > field.maxLength) {
             return `Must be at most ${field.maxLength} character${field.maxLength === 1 ? '' : 's'}`;
         }
-        if (field.pattern != null && !new RegExp(field.pattern).test(value)) {
-            return `Must match pattern: ${field.pattern}`;
+        if (field.pattern != null) {
+            try {
+                if (!new RegExp(field.pattern).test(value)) {
+                    return `Must match pattern: ${field.pattern}`;
+                }
+            } catch {
+                // Invalid regex pattern in schema — skip constraint
+            }
         }
     }
     if ((field.type === 'number' || field.type === 'integer') && typeof value === 'number') {
