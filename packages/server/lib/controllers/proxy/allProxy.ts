@@ -39,6 +39,7 @@ const MEMOIZED_CONNECTION_TTL = 60000;
 
 const logger = getLogger('Proxy.Controller');
 
+/** Parsed once at module load; `envs` comes from `process.env` at process start (restart to change denylist). */
 const baseUrlOverrideDenylist = normalizeDenylist(envs.NANGO_PROXY_BASE_URL_OVERRIDE_DENYLIST);
 
 const schemaHeaders = z.object({

@@ -1,4 +1,18 @@
 /**
+ * Hostname form used for denylist matching: lowercase, no bracketed IPv6 wrapper, no trailing FQDN dot.
+ */
+export function canonicalizeHostnameForDenylist(host: string): string {
+    let h = host.trim().toLowerCase();
+    if (h.startsWith('[') && h.endsWith(']')) {
+        h = h.slice(1, -1);
+    }
+    while (h.endsWith('.')) {
+        h = h.slice(0, -1);
+    }
+    return h;
+}
+
+/**
  * Normalize a denylist entry to a lowercase hostname for comparison.
  * Accepts bare hostnames/IPs or full URLs (uses URL.hostname when `://` is present).
  */
@@ -7,14 +21,17 @@ export function normalizeDenylistHost(entry: string): string {
     if (!trimmed) {
         return '';
     }
+    let host: string;
     if (trimmed.includes('://')) {
         try {
-            return new URL(trimmed).hostname.toLowerCase();
+            host = new URL(trimmed).hostname;
         } catch {
-            return trimmed.toLowerCase();
+            host = trimmed;
         }
+    } else {
+        host = trimmed;
     }
-    return trimmed.toLowerCase();
+    return canonicalizeHostnameForDenylist(host);
 }
 
 export function normalizeDenylist(denylist: string[]): string[] {
@@ -33,7 +50,7 @@ export function normalizeDenylist(denylist: string[]): string[] {
 export function isBaseUrlOverrideDenied(overrideUrl: string, denylist: string[]): boolean {
     let hostname: string;
     try {
-        hostname = new URL(overrideUrl).hostname.toLowerCase();
+        hostname = canonicalizeHostnameForDenylist(new URL(overrideUrl).hostname);
     } catch {
         return false;
     }
