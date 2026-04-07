@@ -70,4 +70,8 @@ describe('isBaseUrlOverrideDenied', () => {
         const list = normalizeDenylist(['http://[::1]/']);
         expect(isBaseUrlOverrideDenied('http://[::1]/path', list)).toBe(true);
     });
+
+    it('fails closed when URL cannot be parsed and denylist is non-empty', () => {
+        expect(isBaseUrlOverrideDenied('http://', ['localhost'])).toBe(true);
+    });
 });

@@ -39,7 +39,6 @@ const MEMOIZED_CONNECTION_TTL = 60000;
 
 const logger = getLogger('Proxy.Controller');
 
-/** Parsed once at module load; `envs` comes from `process.env` at process start (restart to change denylist). */
 const baseUrlOverrideDenylist = normalizeDenylist(envs.NANGO_PROXY_BASE_URL_OVERRIDE_DENYLIST);
 
 const schemaHeaders = z.object({
@@ -66,8 +65,23 @@ export const allPublicProxy = asyncWrapper<AllPublicProxy>(async (req, res, next
         return;
     }
     const parsedHeaders = valHeaders.data satisfies AllPublicProxy['Headers'];
+    const { environment, account, plan } = res.locals;
+
     const baseUrlOverride = parsedHeaders['base-url-override'];
     if (baseUrlOverride && isBaseUrlOverrideDenied(baseUrlOverride, baseUrlOverrideDenylist)) {
+        metrics.increment(metrics.Types.PROXY_BASE_URL_OVERRIDE_DENIED, 1, { accountId: account.id });
+        let overrideHostForLog: string;
+        try {
+            overrideHostForLog = new URL(baseUrlOverride).hostname;
+        } catch {
+            overrideHostForLog = 'unparseable';
+        }
+        logger.warn('Proxy base-url-override denied by denylist', {
+            accountId: account.id,
+            providerConfigKey: parsedHeaders['provider-config-key'],
+            connectionId: parsedHeaders['connection-id'],
+            overrideHost: overrideHostForLog
+        });
         res.status(400).send({
             error: {
                 code: 'base_url_override_not_allowed',
@@ -76,8 +90,6 @@ export const allPublicProxy = asyncWrapper<AllPublicProxy>(async (req, res, next
         });
         return;
     }
-
-    const { environment, account, plan } = res.locals;
 
     metrics.increment(metrics.Types.PROXY_INCOMING_PAYLOAD_SIZE_BYTES, req.rawBody ? Buffer.byteLength(req.rawBody) : 0, { accountId: account.id });
 

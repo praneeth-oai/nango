@@ -48,11 +48,15 @@ export function normalizeDenylist(denylist: string[]): string[] {
 }
 
 export function isBaseUrlOverrideDenied(overrideUrl: string, denylist: string[]): boolean {
+    if (denylist.length === 0) {
+        return false;
+    }
     let hostname: string;
     try {
         hostname = canonicalizeHostnameForDenylist(new URL(overrideUrl).hostname);
     } catch {
-        return false;
+        // Fail closed when a denylist is configured but the override URL cannot be parsed (defense in depth vs. z.url()).
+        return true;
     }
     return denylist.includes(hostname);
 }
