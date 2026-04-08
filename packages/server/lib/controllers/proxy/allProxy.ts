@@ -218,7 +218,29 @@ export const allPublicProxy = asyncWrapper<AllPublicProxy>(async (req, res, next
                     method,
                     retryOn,
                     responseType: 'stream',
-                    forwardHeadersOnRedirect
+                    forwardHeadersOnRedirect,
+                    ...(baseUrlOverrideDenylist.size > 0
+                        ? {
+                              validateProxyRedirectUrl: (absoluteUrl: string) => {
+                                  if (isBaseUrlOverrideDenied(absoluteUrl, baseUrlOverrideDenylist)) {
+                                      metrics.increment(metrics.Types.PROXY_BASE_URL_OVERRIDE_DENIED, 1, { accountId: account.id });
+                                      let redirectHostForLog: string;
+                                      try {
+                                          redirectHostForLog = new URL(absoluteUrl).hostname;
+                                      } catch {
+                                          redirectHostForLog = 'unparseable';
+                                      }
+                                      logger.warn('Proxy redirect to denylisted host blocked', {
+                                          accountId: account.id,
+                                          providerConfigKey: parsedHeaders['provider-config-key'],
+                                          connectionId: parsedHeaders['connection-id'],
+                                          redirectHost: redirectHostForLog
+                                      });
+                                      throw new ProxyError('proxy_redirect_to_denied_host', 'This redirect target is not allowed by server configuration.');
+                                  }
+                              }
+                          }
+                        : {})
                 },
                 internalConfig
             }).unwrap(),
@@ -397,6 +419,23 @@ export async function handleResponse({ res, responseStream, logCtx }: { res: Res
     });
 }
 
+function proxyErrorFromErrorChain(error: unknown): ProxyError | null {
+    let current: unknown = error;
+    const seen = new Set<unknown>();
+    while (current && typeof current === 'object' && !seen.has(current)) {
+        seen.add(current);
+        if (current instanceof ProxyError) {
+            return current;
+        }
+        if ('cause' in current && (current as { cause?: unknown }).cause !== undefined) {
+            current = (current as { cause: unknown }).cause;
+        } else {
+            break;
+        }
+    }
+    return null;
+}
+
 export function handleErrorResponse({
     res,
     error,
@@ -408,6 +447,18 @@ export function handleErrorResponse({
     requestConfig?: AxiosRequestConfig | undefined;
     logCtx: LogContext;
 }) {
+    const proxyErr = proxyErrorFromErrorChain(error);
+    if (proxyErr?.code === 'proxy_redirect_to_denied_host') {
+        void logCtx.error('Proxy redirect denied by denylist', { error: proxyErr });
+        res.status(400).send({
+            error: {
+                code: 'base_url_override_not_allowed',
+                message: 'This base URL override is not allowed by server configuration.'
+            }
+        });
+        return;
+    }
+
     if (!isAxiosError(error)) {
         if (error instanceof ProxyError) {
             void logCtx.error('Unknown error', { error });

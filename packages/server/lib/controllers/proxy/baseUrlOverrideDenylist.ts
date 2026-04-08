@@ -45,7 +45,10 @@ export function normalizeDenylistHost(entry: string): string {
     return canonicalizeHostnameForDenylist(host);
 }
 
-export function normalizeDenylist(denylist: string[]): Set<string> {
+export function normalizeDenylist(denylist: string[] | undefined): Set<string> {
+    if (!denylist?.length) {
+        return new Set();
+    }
     return new Set(denylist.map(normalizeDenylistHost).filter(Boolean));
 }
 

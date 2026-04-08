@@ -44,6 +44,11 @@ describe('normalizeDenylist', () => {
     it('dedupes', () => {
         expect(normalizeDenylist(['localhost', 'LOCALHOST', 'http://localhost/'])).toEqual(new Set(['localhost']));
     });
+
+    it('returns empty set when input is undefined or empty', () => {
+        expect(normalizeDenylist(undefined)).toEqual(new Set());
+        expect(normalizeDenylist([])).toEqual(new Set());
+    });
 });
 
 describe('isBaseUrlOverrideDenied', () => {
