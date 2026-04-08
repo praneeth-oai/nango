@@ -23,6 +23,7 @@ const validation = z
     .strict();
 
 const invalidVerificationCodeMessage = 'The verification code is invalid or has expired. Please try signing in with Google again.';
+const invalidVerificationCodes = new Set(['verification_code_expired', 'verification_code_invalid']);
 
 export const postManagedEmailVerification = asyncWrapper<PostManagedEmailVerification>(async (req, res) => {
     const emptyQuery = requireEmptyQuery(req);
@@ -67,7 +68,7 @@ export const postManagedEmailVerification = asyncWrapper<PostManagedEmailVerific
 
         if (updatedVerification) {
             await setManagedAuthEmailVerification(req, updatedVerification, verification.state);
-        } else if (!workosErr.rawData) {
+        } else if (!workosErr.rawData?.code || !invalidVerificationCodes.has(workosErr.rawData.code)) {
             throw err;
         }
 

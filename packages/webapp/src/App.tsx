@@ -75,6 +75,61 @@ const RedirectWithEnv = ({ path }: { path: string }) => {
     return <Navigate to={`/${env}/${pathWithParams}`} replace />;
 };
 
+const publicAuthRoutes = (() => {
+    if (!globalEnv.features.auth && !globalEnv.features.managedAuth) {
+        return [];
+    }
+
+    const routes = [
+        {
+            path: '/signin',
+            element: <Signin />
+        }
+    ];
+
+    if (globalEnv.features.managedAuth) {
+        routes.push({
+            path: '/signin/verify',
+            element: <ManagedEmailVerification />
+        });
+    }
+
+    if (globalEnv.features.auth) {
+        routes.push(
+            {
+                path: '/signup/:token',
+                element: <InviteSignup />
+            },
+            {
+                path: '/forgot-password',
+                element: <ForgotPassword />
+            },
+            {
+                path: '/reset-password/:token',
+                element: <ResetPassword />
+            },
+            {
+                path: '/verify-email/:uuid',
+                element: <VerifyEmail />
+            },
+            {
+                path: '/verify-email/expired/:token',
+                element: <VerifyEmailByExpiredToken />
+            },
+            {
+                path: '/signup/verification/:token',
+                element: <EmailVerified />
+            },
+            {
+                path: '/signup',
+                element: <Signup />
+            }
+        );
+    }
+
+    return routes;
+})();
+
 const router = sentryCreateBrowserRouter([
     {
         path: '/',
@@ -241,54 +296,7 @@ const router = sentryCreateBrowserRouter([
         path: '/hn-demo',
         element: <Navigate to={'/signup'} />
     },
-    ...(globalEnv.features.auth || globalEnv.features.managedAuth
-        ? [
-              {
-                  path: '/signin',
-                  element: <Signin />
-              },
-              ...(globalEnv.features.managedAuth
-                  ? [
-                        {
-                            path: '/signin/verify',
-                            element: <ManagedEmailVerification />
-                        }
-                    ]
-                  : []),
-              ...(globalEnv.features.auth
-                  ? [
-                        {
-                            path: '/signup/:token',
-                            element: <InviteSignup />
-                        },
-                        {
-                            path: '/forgot-password',
-                            element: <ForgotPassword />
-                        },
-                        {
-                            path: '/reset-password/:token',
-                            element: <ResetPassword />
-                        },
-                        {
-                            path: '/verify-email/:uuid',
-                            element: <VerifyEmail />
-                        },
-                        {
-                            path: '/verify-email/expired/:token',
-                            element: <VerifyEmailByExpiredToken />
-                        },
-                        {
-                            path: '/signup/verification/:token',
-                            element: <EmailVerified />
-                        },
-                        {
-                            path: '/signup',
-                            element: <Signup />
-                        }
-                    ]
-                  : [])
-          ]
-        : []),
+    ...publicAuthRoutes,
     {
         path: '*',
         element: <NotFound />

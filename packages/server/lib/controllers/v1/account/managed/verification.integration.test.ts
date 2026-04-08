@@ -144,4 +144,47 @@ describe(`POST ${route}`, () => {
             }
         });
     });
+
+    it('should rethrow unexpected structured WorkOS errors instead of masking them as invalid verification codes', async () => {
+        const email = `${nanoid()}@example.com`;
+
+        workosMocks.authenticateWithCode.mockRejectedValue({
+            rawData: {
+                code: 'email_verification_required',
+                message: 'Email ownership must be verified before authentication.',
+                pending_authentication_token: 'pending_token_123',
+                email,
+                email_verification_id: 'email_verification_123'
+            }
+        });
+
+        workosMocks.authenticateWithEmailVerification.mockRejectedValue({
+            rawData: {
+                code: 'rate_limit_exceeded',
+                message: 'Too many requests'
+            }
+        });
+
+        const callbackRes = await fetch(`${api.url}/api/v1/login/callback?code=oauth_code_123`, {
+            redirect: 'manual'
+        });
+
+        const sessionCookie = callbackRes.headers.getSetCookie()[0]?.split(';')[0];
+        expect(sessionCookie).toBeTruthy();
+
+        const postVerificationRes = await api.fetch('/api/v1/account/managed/verification', {
+            method: 'POST',
+            session: sessionCookie!,
+            body: {
+                code: '123456'
+            }
+        });
+
+        expect(postVerificationRes.res.status).toBe(500);
+        expect(postVerificationRes.json).toMatchObject({
+            error: {
+                code: 'generic_error_support'
+            }
+        });
+    });
 });
