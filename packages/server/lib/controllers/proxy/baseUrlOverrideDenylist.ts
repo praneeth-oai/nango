@@ -34,21 +34,12 @@ export function normalizeDenylistHost(entry: string): string {
     return canonicalizeHostnameForDenylist(host);
 }
 
-export function normalizeDenylist(denylist: string[]): string[] {
-    const out: string[] = [];
-    const seen = new Set<string>();
-    for (const e of denylist) {
-        const h = normalizeDenylistHost(e);
-        if (h && !seen.has(h)) {
-            seen.add(h);
-            out.push(h);
-        }
-    }
-    return out;
+export function normalizeDenylist(denylist: string[]): Set<string> {
+    return new Set(denylist.map(normalizeDenylistHost).filter(Boolean));
 }
 
-export function isBaseUrlOverrideDenied(overrideUrl: string, denylist: string[]): boolean {
-    if (denylist.length === 0) {
+export function isBaseUrlOverrideDenied(overrideUrl: string, denylist: Set<string>): boolean {
+    if (denylist.size === 0) {
         return false;
     }
     let hostname: string;
@@ -58,5 +49,5 @@ export function isBaseUrlOverrideDenied(overrideUrl: string, denylist: string[])
         // Fail closed when a denylist is configured but the override URL cannot be parsed (defense in depth vs. z.url()).
         return true;
     }
-    return denylist.includes(hostname);
+    return denylist.has(hostname);
 }

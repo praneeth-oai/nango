@@ -36,25 +36,25 @@ describe('normalizeDenylistHost', () => {
 
 describe('normalizeDenylist', () => {
     it('dedupes', () => {
-        expect(normalizeDenylist(['localhost', 'LOCALHOST', 'http://localhost/'])).toEqual(['localhost']);
+        expect(normalizeDenylist(['localhost', 'LOCALHOST', 'http://localhost/'])).toEqual(new Set(['localhost']));
     });
 });
 
 describe('isBaseUrlOverrideDenied', () => {
     it('returns false when denylist empty', () => {
-        expect(isBaseUrlOverrideDenied('http://169.254.169.254/', [])).toBe(false);
+        expect(isBaseUrlOverrideDenied('http://169.254.169.254/', new Set())).toBe(false);
     });
 
     it('returns true on exact hostname match', () => {
-        expect(isBaseUrlOverrideDenied('http://169.254.169.254/foo', ['169.254.169.254'])).toBe(true);
+        expect(isBaseUrlOverrideDenied('http://169.254.169.254/foo', new Set(['169.254.169.254']))).toBe(true);
     });
 
     it('returns false when host not listed', () => {
-        expect(isBaseUrlOverrideDenied('https://api.github.com', ['169.254.169.254'])).toBe(false);
+        expect(isBaseUrlOverrideDenied('https://api.github.com', new Set(['169.254.169.254']))).toBe(false);
     });
 
     it('is case-insensitive', () => {
-        expect(isBaseUrlOverrideDenied('http://LOCALHOST:8080/', ['localhost'])).toBe(true);
+        expect(isBaseUrlOverrideDenied('http://LOCALHOST:8080/', new Set(['localhost']))).toBe(true);
     });
 
     it('matches when override uses trailing-dot hostname and denylist lists bare host', () => {
@@ -72,6 +72,6 @@ describe('isBaseUrlOverrideDenied', () => {
     });
 
     it('fails closed when URL cannot be parsed and denylist is non-empty', () => {
-        expect(isBaseUrlOverrideDenied('http://', ['localhost'])).toBe(true);
+        expect(isBaseUrlOverrideDenied('http://', new Set(['localhost']))).toBe(true);
     });
 });
