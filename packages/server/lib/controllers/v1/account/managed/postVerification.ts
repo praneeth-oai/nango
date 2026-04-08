@@ -2,7 +2,12 @@ import * as z from 'zod';
 
 import { getLogger, requireEmptyQuery, zodErrorToHTTP } from '@nangohq/utils';
 
-import { finalizeManagedAuthentication, getManagedAuthRequestMetadata, saveSession } from './utils.js';
+import {
+    finalizeManagedAuthentication,
+    getManagedAuthEmailVerificationFromError,
+    getManagedAuthRequestMetadata,
+    setManagedAuthEmailVerification
+} from './utils.js';
 import { getWorkOSClient } from '../../../../clients/workos.client.js';
 import { envs } from '../../../../env.js';
 import { asyncWrapper } from '../../../../utils/asyncWrapper.js';
@@ -16,6 +21,8 @@ const validation = z
         code: z.string().trim().min(6).max(12)
     })
     .strict();
+
+const invalidVerificationCodeMessage = 'The verification code is invalid or has expired. Please try signing in with Google again.';
 
 export const postManagedEmailVerification = asyncWrapper<PostManagedEmailVerification>(async (req, res) => {
     const emptyQuery = requireEmptyQuery(req);
@@ -41,59 +48,48 @@ export const postManagedEmailVerification = asyncWrapper<PostManagedEmailVerific
     }
 
     const workos = getWorkOSClient();
+    let authResponse: Awaited<ReturnType<typeof workos.userManagement.authenticateWithEmailVerification>>;
 
     try {
-        const authResponse = await workos.userManagement.authenticateWithEmailVerification({
+        authResponse = await workos.userManagement.authenticateWithEmailVerification({
             clientId: envs.WORKOS_CLIENT_ID || '',
             code: val.data.code,
             pendingAuthenticationToken: verification.pendingAuthenticationToken,
             ...getManagedAuthRequestMetadata(req)
         });
-
-        await finalizeManagedAuthentication({
-            req,
-            res,
-            authorizedUser: authResponse.user,
-            organizationId: authResponse.organizationId,
-            workos,
-            state: verification.state,
-            responseMode: 'json'
-        });
     } catch (err) {
         const workosErr = err as {
             rawData?: {
                 code?: string;
-                message?: string;
-                pending_authentication_token?: string;
-                email?: string;
-                email_verification_id?: string;
             };
         };
+        const updatedVerification = getManagedAuthEmailVerificationFromError(err);
 
-        if (
-            workosErr.rawData?.code === 'email_verification_required' &&
-            workosErr.rawData.pending_authentication_token &&
-            workosErr.rawData.email &&
-            workosErr.rawData.email_verification_id
-        ) {
-            req.session.managedAuthEmailVerification = {
-                email: workosErr.rawData.email,
-                pendingAuthenticationToken: workosErr.rawData.pending_authentication_token,
-                emailVerificationId: workosErr.rawData.email_verification_id,
-                state: verification.state
-            };
-            await saveSession(req);
+        if (updatedVerification) {
+            await setManagedAuthEmailVerification(req, updatedVerification, verification.state);
+        } else if (!workosErr.rawData) {
+            throw err;
         }
 
         logger.warn('Failed to authenticate WorkOS email verification code', {
-            code: workosErr.rawData?.code,
-            message: workosErr.rawData?.message
+            code: workosErr.rawData?.code
         });
         res.status(400).send({
             error: {
                 code: 'invalid_verification_code',
-                message: workosErr.rawData?.message || 'The verification code is invalid or has expired. Please try signing in with Google again.'
+                message: invalidVerificationCodeMessage
             }
         });
+        return;
     }
+
+    await finalizeManagedAuthentication({
+        req,
+        res,
+        authorizedUser: authResponse.user,
+        organizationId: authResponse.organizationId,
+        workos,
+        state: verification.state,
+        responseMode: 'json'
+    });
 });

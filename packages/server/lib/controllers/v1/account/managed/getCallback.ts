@@ -3,7 +3,7 @@ import * as z from 'zod';
 
 import { basePublicUrl, getLogger } from '@nangohq/utils';
 
-import { finalizeManagedAuthentication, saveSession } from './utils.js';
+import { finalizeManagedAuthentication, getManagedAuthEmailVerificationFromError, setManagedAuthEmailVerification } from './utils.js';
 import { getWorkOSClient } from '../../../../clients/workos.client.js';
 import { envs } from '../../../../env.js';
 import { asyncWrapper } from '../../../../utils/asyncWrapper.js';
@@ -68,19 +68,9 @@ export const getManagedCallback = asyncWrapper<GetManagedCallback>(async (req, r
             }
         }
 
-        if (
-            workosErr.rawData?.code === 'email_verification_required' &&
-            workosErr.rawData.pending_authentication_token &&
-            workosErr.rawData.email &&
-            workosErr.rawData.email_verification_id
-        ) {
-            req.session.managedAuthEmailVerification = {
-                email: workosErr.rawData.email,
-                pendingAuthenticationToken: workosErr.rawData.pending_authentication_token,
-                emailVerificationId: workosErr.rawData.email_verification_id,
-                state: query.state
-            };
-            await saveSession(req);
+        const verification = getManagedAuthEmailVerificationFromError(err);
+        if (verification) {
+            await setManagedAuthEmailVerification(req, verification, query.state);
             res.redirect(`${basePublicUrl}/signin/verify`);
             return;
         }

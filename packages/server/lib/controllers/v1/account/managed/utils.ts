@@ -31,6 +31,21 @@ interface FinalizeManagedAuthParams {
     responseMode?: 'json' | 'redirect';
 }
 
+export interface ManagedAuthEmailVerificationData {
+    email: string;
+    emailVerificationId: string;
+    pendingAuthenticationToken: string;
+}
+
+interface ManagedAuthVerificationRequiredError {
+    rawData?: {
+        code?: string;
+        pending_authentication_token?: string;
+        email?: string;
+        email_verification_id?: string;
+    };
+}
+
 export function parseManagedAuthState(state: string): InviteAccountState | null {
     try {
         const res = JSON.parse(Buffer.from(state, 'base64').toString('ascii'));
@@ -47,6 +62,25 @@ export function clearManagedAuthEmailVerification(req: Request) {
     delete req.session.managedAuthEmailVerification;
 }
 
+export function getManagedAuthEmailVerificationFromError(err: unknown): ManagedAuthEmailVerificationData | null {
+    const workosErr = err as ManagedAuthVerificationRequiredError;
+
+    if (
+        workosErr.rawData?.code !== 'email_verification_required' ||
+        !workosErr.rawData.pending_authentication_token ||
+        !workosErr.rawData.email ||
+        !workosErr.rawData.email_verification_id
+    ) {
+        return null;
+    }
+
+    return {
+        email: workosErr.rawData.email,
+        pendingAuthenticationToken: workosErr.rawData.pending_authentication_token,
+        emailVerificationId: workosErr.rawData.email_verification_id
+    };
+}
+
 export async function saveSession(req: Request): Promise<void> {
     await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
@@ -58,6 +92,14 @@ export async function saveSession(req: Request): Promise<void> {
             resolve();
         });
     });
+}
+
+export async function setManagedAuthEmailVerification(req: Request, verification: ManagedAuthEmailVerificationData, state?: string): Promise<void> {
+    req.session.managedAuthEmailVerification = {
+        ...verification,
+        state
+    };
+    await saveSession(req);
 }
 
 export function getManagedAuthRequestMetadata(req: Request) {
