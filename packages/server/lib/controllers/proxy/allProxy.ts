@@ -69,19 +69,6 @@ export const allPublicProxy = asyncWrapper<AllPublicProxy>(async (req, res, next
 
     const baseUrlOverride = parsedHeaders['base-url-override'];
     if (baseUrlOverride && isBaseUrlOverrideDenied(baseUrlOverride, baseUrlOverrideDenylist)) {
-        metrics.increment(metrics.Types.PROXY_BASE_URL_OVERRIDE_DENIED, 1, { accountId: account.id });
-        let overrideHostForLog: string;
-        try {
-            overrideHostForLog = new URL(baseUrlOverride).hostname;
-        } catch {
-            overrideHostForLog = 'unparseable';
-        }
-        logger.warn('Proxy base-url-override denied by denylist', {
-            accountId: account.id,
-            providerConfigKey: parsedHeaders['provider-config-key'],
-            connectionId: parsedHeaders['connection-id'],
-            overrideHost: overrideHostForLog
-        });
         res.status(400).send({
             error: {
                 code: 'base_url_override_not_allowed',
