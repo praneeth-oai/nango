@@ -54,7 +54,7 @@ export function createAgentPrompt(payload: AgentSessionResolvedPayload): string 
     if (connection_id) {
         context['connection_id'] = connection_id;
     }
-    return `${prompt}\n\nYou are working inside a prepared Nango project at ${agentProjectPath}. Use the installed skill named nango-remote-function-builder from .agents/skills when relevant.\n\nContext:\n${JSON.stringify(context, null, 2)}`;
+    return `${prompt}\n\nYou are working inside a prepared Nango project at ${agentProjectPath}. Use the installed skill named building-nango-functions-locally from .agents/skills when relevant.\n\nContext:\n${JSON.stringify(context, null, 2)}`;
 }
 
 export function createAnswerPrompt(answer: string): string {
