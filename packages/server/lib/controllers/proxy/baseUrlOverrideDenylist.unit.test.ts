@@ -32,6 +32,12 @@ describe('normalizeDenylistHost', () => {
     it('returns empty for whitespace-only', () => {
         expect(normalizeDenylistHost('  ')).toBe('');
     });
+
+    it('normalizes bare IPv4 alternate spellings like URL (integer, octal, hex)', () => {
+        expect(normalizeDenylistHost('2852039166')).toBe('169.254.169.254');
+        expect(normalizeDenylistHost('0177.0.0.1')).toBe('127.0.0.1');
+        expect(normalizeDenylistHost('0x7f.0.0.1')).toBe('127.0.0.1');
+    });
 });
 
 describe('normalizeDenylist', () => {
@@ -47,6 +53,10 @@ describe('isBaseUrlOverrideDenied', () => {
 
     it('returns true on exact hostname match', () => {
         expect(isBaseUrlOverrideDenied('http://169.254.169.254/foo', new Set(['169.254.169.254']))).toBe(true);
+    });
+
+    it('matches when denylist uses bare IPv4 integer and override uses dotted decimal', () => {
+        expect(isBaseUrlOverrideDenied('http://169.254.169.254/', normalizeDenylist(['2852039166']))).toBe(true);
     });
 
     it('returns false when host not listed', () => {

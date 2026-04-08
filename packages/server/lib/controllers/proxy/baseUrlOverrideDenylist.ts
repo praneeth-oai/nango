@@ -1,5 +1,11 @@
 /**
  * Hostname form used for denylist matching: lowercase, no bracketed IPv6 wrapper, no trailing FQDN dot.
+ *
+ * Note: {@link https://url.spec.whatwg.org/ WHATWG URL} already normalizes IPv4 hostnames to dotted
+ * decimal (`127.0.0.1`) for octal, hexadecimal, and 32-bit integer spellings. That applies to
+ * `new URL(overrideUrl).hostname` in {@link isBaseUrlOverrideDenied}. Bare denylist entries are
+ * passed through `new URL('http://…')` in {@link normalizeDenylistHost} so they use the same IPv4
+ * rules. IPv6 literals must be bracketed when using bare form (`[::1]`), matching URL parsing.
  */
 export function canonicalizeHostnameForDenylist(host: string): string {
     let h = host.trim().toLowerCase();
@@ -14,7 +20,8 @@ export function canonicalizeHostnameForDenylist(host: string): string {
 
 /**
  * Normalize a denylist entry to a lowercase hostname for comparison.
- * Accepts bare hostnames/IPs or full URLs (uses URL.hostname when `://` is present).
+ * Accepts full URLs (`://` present), or bare hostnames / `host:port` / IPv4 literals — bare forms are
+ * parsed with `new URL('http://…')` so IPv4 uses the same normalization as {@link isBaseUrlOverrideDenied}.
  */
 export function normalizeDenylistHost(entry: string): string {
     const trimmed = entry.trim();
@@ -29,7 +36,11 @@ export function normalizeDenylistHost(entry: string): string {
             host = trimmed;
         }
     } else {
-        host = trimmed;
+        try {
+            host = new URL(`http://${trimmed}`).hostname;
+        } catch {
+            host = trimmed;
+        }
     }
     return canonicalizeHostnameForDenylist(host);
 }
