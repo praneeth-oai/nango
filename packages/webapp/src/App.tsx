@@ -13,6 +13,7 @@ import { useUser } from './hooks/useUser';
 import { EmailVerified } from './pages/Account/EmailVerified';
 import ForgotPassword from './pages/Account/ForgotPassword';
 import { InviteSignup } from './pages/Account/InviteSignup';
+import { ManagedEmailVerification } from './pages/Account/ManagedEmailVerification';
 import ResetPassword from './pages/Account/ResetPassword';
 import { Signin } from './pages/Account/Signin';
 import { Signup } from './pages/Account/Signup';
@@ -240,40 +241,52 @@ const router = sentryCreateBrowserRouter([
         path: '/hn-demo',
         element: <Navigate to={'/signup'} />
     },
-    ...(globalEnv.features.auth
+    ...(globalEnv.features.auth || globalEnv.features.managedAuth
         ? [
               {
                   path: '/signin',
                   element: <Signin />
               },
-              {
-                  path: '/signup/:token',
-                  element: <InviteSignup />
-              },
-              {
-                  path: '/forgot-password',
-                  element: <ForgotPassword />
-              },
-              {
-                  path: '/reset-password/:token',
-                  element: <ResetPassword />
-              },
-              {
-                  path: '/verify-email/:uuid',
-                  element: <VerifyEmail />
-              },
-              {
-                  path: '/verify-email/expired/:token',
-                  element: <VerifyEmailByExpiredToken />
-              },
-              {
-                  path: '/signup/verification/:token',
-                  element: <EmailVerified />
-              },
-              {
-                  path: '/signup',
-                  element: <Signup />
-              }
+              ...(globalEnv.features.managedAuth
+                  ? [
+                        {
+                            path: '/signin/verify',
+                            element: <ManagedEmailVerification />
+                        }
+                    ]
+                  : []),
+              ...(globalEnv.features.auth
+                  ? [
+                        {
+                            path: '/signup/:token',
+                            element: <InviteSignup />
+                        },
+                        {
+                            path: '/forgot-password',
+                            element: <ForgotPassword />
+                        },
+                        {
+                            path: '/reset-password/:token',
+                            element: <ResetPassword />
+                        },
+                        {
+                            path: '/verify-email/:uuid',
+                            element: <VerifyEmail />
+                        },
+                        {
+                            path: '/verify-email/expired/:token',
+                            element: <VerifyEmailByExpiredToken />
+                        },
+                        {
+                            path: '/signup/verification/:token',
+                            element: <EmailVerified />
+                        },
+                        {
+                            path: '/signup',
+                            element: <Signup />
+                        }
+                    ]
+                  : [])
           ]
         : []),
     {
