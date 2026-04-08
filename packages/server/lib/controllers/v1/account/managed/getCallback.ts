@@ -47,6 +47,17 @@ export const getManagedCallback = asyncWrapper<GetManagedCallback>(async (req, r
             return;
         }
 
+        const verification = getManagedAuthEmailVerificationFromError(err);
+        if (verification) {
+            const span = tracer.scope().active();
+            if (span) {
+                span.setTag('workos.flow', 'email_verification');
+            }
+            await setManagedAuthEmailVerification(req, verification, query.state);
+            res.redirect(`${basePublicUrl}/signin/verify`);
+            return;
+        }
+
         const workosErr = err as {
             rawData?: {
                 code?: string;
@@ -66,13 +77,6 @@ export const getManagedCallback = asyncWrapper<GetManagedCallback>(async (req, r
                 span.setTag('workos.error_code', workosErr.rawData.code);
                 span.setTag('workos.error_message', workosErr.rawData.message);
             }
-        }
-
-        const verification = getManagedAuthEmailVerificationFromError(err);
-        if (verification) {
-            await setManagedAuthEmailVerification(req, verification, query.state);
-            res.redirect(`${basePublicUrl}/signin/verify`);
-            return;
         }
 
         throw err;
